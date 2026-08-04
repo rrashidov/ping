@@ -17,8 +17,9 @@ services:
   app:
     build: .
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
+      TZ: Europe/Sofia
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/pingdb
       SPRING_DATASOURCE_USERNAME: ping
       SPRING_DATASOURCE_PASSWORD: ping

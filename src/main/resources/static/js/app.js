@@ -22,8 +22,8 @@ function generateDayLabels(granularity) {
 
 function nowLabel(granularity) {
     const now = new Date();
-    const hh = String(now.getUTCHours()).padStart(2, '0');
-    const mm = String(now.getUTCMinutes()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
     return granularity === 'hour' ? hh + ':00' : hh + ':' + mm;
 }
 

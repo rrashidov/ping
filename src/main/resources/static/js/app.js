@@ -47,6 +47,7 @@ function buildNowAnnotation(granularity) {
 }
 
 function initChart() {
+    Chart.getChart("pingChart")?.destroy();
     const labels = generateDayLabels(currentGranularity);
     const ctx = document.getElementById('pingChart').getContext('2d');
     pingChart = new Chart(ctx, {

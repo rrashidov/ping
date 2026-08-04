@@ -101,7 +101,7 @@ function initChart() {
                 legend: { labels: { color: '#c9d1d9' } },
                 zoom: {
                     pan: { enabled: true, mode: 'x' },
-                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                    zoom: { drag: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
                 },
                 annotation: {
                     annotations: { nowLine: buildNowAnnotation(currentGranularity) }

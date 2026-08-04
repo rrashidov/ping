@@ -1,5 +1,5 @@
 Chart.register(ChartZoom);
-Chart.register(ChartAnnotation);
+Chart.register(window["chartjs-plugin-annotation"]);
 
 let currentGranularity = 'hour';
 let pingChart = null;

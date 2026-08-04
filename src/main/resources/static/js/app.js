@@ -1,35 +1,116 @@
 Chart.register(ChartZoom);
+Chart.register(ChartAnnotation);
 
-let currentGranularity = 'minute';
+let currentGranularity = 'hour';
 let pingChart = null;
 
+function generateDayLabels(granularity) {
+    const labels = [];
+    if (granularity === 'hour') {
+        for (let h = 0; h < 24; h++) {
+            labels.push(String(h).padStart(2, '0') + ':00');
+        }
+    } else {
+        for (let h = 0; h < 24; h++) {
+            for (let m = 0; m < 60; m++) {
+                labels.push(String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'));
+            }
+        }
+    }
+    return labels;
+}
+
+function nowLabel(granularity) {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return granularity === 'hour' ? hh + ':00' : hh + ':' + mm;
+}
+
+function buildNowAnnotation(granularity) {
+    return {
+        type: 'line',
+        scaleID: 'x',
+        value: nowLabel(granularity),
+        borderColor: '#e3b341',
+        borderWidth: 2,
+        borderDash: [6, 3],
+        label: {
+            display: true,
+            content: 'Now',
+            color: '#e3b341',
+            backgroundColor: 'transparent',
+            font: { size: 11 },
+            position: 'start'
+        }
+    };
+}
+
 function initChart() {
+    const labels = generateDayLabels(currentGranularity);
     const ctx = document.getElementById('pingChart').getContext('2d');
     pingChart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: [], datasets: [{
-            label: 'Avg Response (ms)',
-            data: [],
-            borderColor: '#2ea043',
-            backgroundColor: 'rgba(46,160,67,0.1)',
-            borderWidth: 2,
-            pointRadius: 3,
-            tension: 0.3,
-            fill: true
-        }]},
+        data: {
+            labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Avg Response (ms)',
+                    data: new Array(labels.length).fill(null),
+                    backgroundColor: 'rgba(46,160,67,0.7)',
+                    borderColor: '#2ea043',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'line',
+                    label: 'Failures',
+                    data: new Array(labels.length).fill(null),
+                    borderColor: '#f85149',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    tension: 0.3,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             scales: {
-                x: { ticks: { color: '#8b949e', maxTicksLimit: 12 }, grid: { color: '#21262d' } },
-                y: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' }, title: { display: true, text: 'ms', color: '#8b949e' } }
+                x: {
+                    ticks: { color: '#8b949e', maxTicksLimit: 24, autoSkip: true },
+                    grid: { color: '#21262d' }
+                },
+                y: {
+                    position: 'left',
+                    min: 0,
+                    ticks: { color: '#8b949e' },
+                    grid: { color: '#21262d' },
+                    title: { display: true, text: 'ms', color: '#8b949e' }
+                },
+                y1: {
+                    position: 'right',
+                    min: 0,
+                    ticks: {
+                        color: '#f85149',
+                        stepSize: 1,
+                        callback: v => Number.isInteger(v) ? v : null
+                    },
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: 'failures', color: '#f85149' }
+                }
             },
             plugins: {
                 legend: { labels: { color: '#c9d1d9' } },
                 zoom: {
                     pan: { enabled: true, mode: 'x' },
                     zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                },
+                annotation: {
+                    annotations: { nowLine: buildNowAnnotation(currentGranularity) }
                 }
             }
         }
@@ -42,13 +123,22 @@ function resetZoom() {
 
 function setGranularity(g) {
     currentGranularity = g;
-    document.getElementById('btn-minute').className = g === 'minute' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
     document.getElementById('btn-hour').className   = g === 'hour'   ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
+    document.getElementById('btn-minute').className = g === 'minute' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
+    const labels = generateDayLabels(g);
+    pingChart.data.labels = labels;
+    pingChart.data.datasets[0].data = new Array(labels.length).fill(null);
+    pingChart.data.datasets[1].data = new Array(labels.length).fill(null);
+    pingChart.options.plugins.annotation.annotations.nowLine = buildNowAnnotation(g);
+    pingChart.resetZoom();
+    pingChart.update('none');
     fetchAndUpdate();
 }
 
-function formatBucket(bucket) {
-    return bucket.replace('T', ' ');
+function bucketToLabel(bucket, granularity) {
+    const timePart = bucket.split('T')[1];
+    const parts = timePart.split(':');
+    return granularity === 'hour' ? parts[0] + ':00' : parts[0] + ':' + parts[1];
 }
 
 async function fetchAndUpdate() {
@@ -60,12 +150,24 @@ async function fetchAndUpdate() {
         const stats = await statsRes.json();
         const failData = await failRes.json();
 
-        // Update chart
-        pingChart.data.labels = stats.data.map(b => formatBucket(b.bucket));
-        pingChart.data.datasets[0].data = stats.data.map(b => b.avgResponseMs);
+        const labels = pingChart.data.labels;
+        const avgData = new Array(labels.length).fill(null);
+        const failCounts = new Array(labels.length).fill(null);
+
+        for (const b of stats.data) {
+            const label = bucketToLabel(b.bucket, currentGranularity);
+            const idx = labels.indexOf(label);
+            if (idx !== -1) {
+                avgData[idx] = b.avgResponseMs;
+                failCounts[idx] = b.failures > 0 ? b.failures : null;
+            }
+        }
+
+        pingChart.data.datasets[0].data = avgData;
+        pingChart.data.datasets[1].data = failCounts;
+        pingChart.options.plugins.annotation.annotations.nowLine = buildNowAnnotation(currentGranularity);
         pingChart.update('none');
 
-        // Update status indicator
         const last = stats.data.length ? stats.data[stats.data.length - 1] : null;
         const indicator = document.getElementById('status-indicator');
         if (last) {
@@ -77,7 +179,6 @@ async function fetchAndUpdate() {
             indicator.innerHTML = dot + label;
         }
 
-        // Update failures table
         const tbody = document.getElementById('failures-body');
         if (!failData.failures.length) {
             tbody.innerHTML = '<tr><td class="text-secondary">No failures in the last 48 hours</td></tr>';

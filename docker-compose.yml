@@ -1,0 +1,30 @@
+services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: ping
+      MYSQL_DATABASE: pingdb
+      MYSQL_USER: ping
+      MYSQL_PASSWORD: ping
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "ping", "-pping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/pingdb
+      SPRING_DATASOURCE_USERNAME: ping
+      SPRING_DATASOURCE_PASSWORD: ping
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:

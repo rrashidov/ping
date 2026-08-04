@@ -22,8 +22,8 @@ function generateDayLabels(granularity) {
 
 function nowLabel(granularity) {
     const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
+    const hh = String(now.getUTCHours()).padStart(2, '0');
+    const mm = String(now.getUTCMinutes()).padStart(2, '0');
     return granularity === 'hour' ? hh + ':00' : hh + ':' + mm;
 }
 
@@ -35,14 +35,7 @@ function buildNowAnnotation(granularity) {
         borderColor: '#e3b341',
         borderWidth: 2,
         borderDash: [6, 3],
-        label: {
-            display: true,
-            content: 'Now',
-            color: '#e3b341',
-            backgroundColor: 'transparent',
-            font: { size: 11 },
-            position: 'start'
-        }
+        label: { display: false }
     };
 }
 

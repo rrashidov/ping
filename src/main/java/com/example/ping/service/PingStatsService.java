@@ -5,6 +5,7 @@ import com.example.ping.dto.*;
 import com.example.ping.repository.PingRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -24,9 +25,7 @@ public class PingStatsService {
 
     public StatsResponse getStats(String granularity) {
         boolean byHour = "hour".equalsIgnoreCase(granularity);
-        LocalDateTime since = byHour
-                ? LocalDateTime.now().minusHours(48)
-                : LocalDateTime.now().minusHours(2);
+        LocalDateTime since = LocalDate.now().atStartOfDay();
 
         List<PingResult> results = pingRepository.findSince(since);
         DateTimeFormatter fmt = byHour ? HOUR_FMT : MINUTE_FMT;

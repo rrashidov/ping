@@ -30,7 +30,7 @@ Redesign the Ping Monitor chart from a rolling-window line chart to a full-day m
 
 ### New bundled asset
 
-- `chartjs-plugin-annotation` v3.x — downloaded locally to `src/main/resources/static/js/chartjs-plugin-annotation.min.js`
+- `chartjs-plugin-annotation` v3.1.0 — downloaded locally to `src/main/resources/static/js/chartjs-plugin-annotation.min.js`
 - Added to `index.html` script load order: after `chartjs-plugin-zoom.min.js`, before `app.js`
 - Registered in `app.js`: `Chart.register(ChartAnnotation)`
 

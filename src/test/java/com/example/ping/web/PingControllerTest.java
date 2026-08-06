@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,7 +25,7 @@ class PingControllerTest {
     @Test
     void statsEndpoint_returnsJson() throws Exception {
         var bucket = new StatsBucket("2026-08-04T10:05:00", 42.0, 58L, 2L);
-        when(pingStatsService.getStats("minute"))
+        when(pingStatsService.getStats("minute", LocalDate.now()))
                 .thenReturn(new StatsResponse("minute", List.of(bucket)));
 
         mvc.perform(get("/api/pings/stats").param("granularity", "minute"))
@@ -36,12 +37,30 @@ class PingControllerTest {
 
     @Test
     void statsEndpoint_defaultsToMinute() throws Exception {
-        when(pingStatsService.getStats("minute"))
+        when(pingStatsService.getStats("minute", LocalDate.now()))
                 .thenReturn(new StatsResponse("minute", List.of()));
 
         mvc.perform(get("/api/pings/stats"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.granularity").value("minute"));
+    }
+
+    @Test
+    void statsEndpoint_acceptsExplicitDate() throws Exception {
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        when(pingStatsService.getStats("hour", yesterday))
+                .thenReturn(new StatsResponse("hour", List.of()));
+
+        mvc.perform(get("/api/pings/stats")
+                        .param("granularity", "hour")
+                        .param("date", yesterday.toString()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void statsEndpoint_returnsBadRequestForInvalidDate() throws Exception {
+        mvc.perform(get("/api/pings/stats").param("date", "not-a-date"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

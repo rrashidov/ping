@@ -23,4 +23,12 @@ public interface PingRepository extends JpaRepository<PingResult, Long> {
         ORDER BY p.pingedAt ASC
         """)
     List<PingResult> findSince(@Param("since") LocalDateTime since);
+
+    @Query("""
+        SELECT p FROM PingResult p
+        WHERE p.pingedAt >= :since AND p.pingedAt < :until
+        ORDER BY p.pingedAt ASC
+        """)
+    List<PingResult> findBetween(@Param("since") LocalDateTime since,
+                                 @Param("until") LocalDateTime until);
 }

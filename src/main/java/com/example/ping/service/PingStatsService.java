@@ -24,10 +24,15 @@ public class PingStatsService {
     }
 
     public StatsResponse getStats(String granularity) {
-        boolean byHour = "hour".equalsIgnoreCase(granularity);
-        LocalDateTime since = LocalDate.now().atStartOfDay();
+        return getStats(granularity, LocalDate.now());
+    }
 
-        List<PingResult> results = pingRepository.findSince(since);
+    public StatsResponse getStats(String granularity, LocalDate date) {
+        boolean byHour = "hour".equalsIgnoreCase(granularity);
+        LocalDateTime since = date.atStartOfDay();
+        LocalDateTime until = date.plusDays(1).atStartOfDay();
+
+        List<PingResult> results = pingRepository.findBetween(since, until);
         DateTimeFormatter fmt = byHour ? HOUR_FMT : MINUTE_FMT;
 
         Map<String, List<PingResult>> grouped = results.stream()

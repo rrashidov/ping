@@ -18,10 +18,10 @@ class PingStatsServiceTest {
     void getStats_minute_returnsMinuteBucketForToday() {
         PingRepository repo = mock(PingRepository.class);
         var t = LocalDate.now().atTime(10, 5, 30);
-        when(repo.findSince(any())).thenReturn(List.of(new PingResult(t, true, 42L)));
+        when(repo.findBetween(any(), any())).thenReturn(List.of(new PingResult(t, true, 42L)));
 
         var service = new PingStatsService(repo);
-        var response = service.getStats("minute");
+        var response = service.getStats("minute", LocalDate.now());
 
         assertThat(response.granularity()).isEqualTo("minute");
         var bucket = response.data().stream()
@@ -37,10 +37,10 @@ class PingStatsServiceTest {
     void getStats_hour_returnsHourBucketForToday() {
         PingRepository repo = mock(PingRepository.class);
         var t = LocalDate.now().atTime(10, 5, 30);
-        when(repo.findSince(any())).thenReturn(List.of(new PingResult(t, true, 100L)));
+        when(repo.findBetween(any(), any())).thenReturn(List.of(new PingResult(t, true, 100L)));
 
         var service = new PingStatsService(repo);
-        var response = service.getStats("hour");
+        var response = service.getStats("hour", LocalDate.now());
 
         assertThat(response.granularity()).isEqualTo("hour");
         var bucket = response.data().stream()
@@ -54,14 +54,14 @@ class PingStatsServiceTest {
     void getStats_countsBothSuccessAndFailureInBucket() {
         PingRepository repo = mock(PingRepository.class);
         var t = LocalDate.now().atTime(10, 5, 0);
-        when(repo.findSince(any())).thenReturn(List.of(
+        when(repo.findBetween(any(), any())).thenReturn(List.of(
                 new PingResult(t, true, 40L),
                 new PingResult(t.plusSeconds(10), true, 60L),
                 new PingResult(t.plusSeconds(20), false, null)
         ));
 
         var service = new PingStatsService(repo);
-        var response = service.getStats("minute");
+        var response = service.getStats("minute", LocalDate.now());
 
         var bucket = response.data().stream()
                 .filter(b -> b.bucket().contains("T10:05:00"))
@@ -69,6 +69,23 @@ class PingStatsServiceTest {
         assertThat(bucket.count()).isEqualTo(3);
         assertThat(bucket.failures()).isEqualTo(1);
         assertThat(bucket.avgResponseMs()).isEqualTo(50.0);
+    }
+
+    @Test
+    void getStats_returnsDataForPastDate() {
+        PingRepository repo = mock(PingRepository.class);
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        var t = yesterday.atTime(14, 0, 0);
+        when(repo.findBetween(
+                yesterday.atStartOfDay(),
+                yesterday.plusDays(1).atStartOfDay()
+        )).thenReturn(List.of(new PingResult(t, true, 77L)));
+
+        var service = new PingStatsService(repo);
+        var response = service.getStats("hour", yesterday);
+
+        assertThat(response.data()).hasSize(1);
+        assertThat(response.data().get(0).avgResponseMs()).isEqualTo(77.0);
     }
 
     @Test

@@ -4,6 +4,47 @@ Chart.register(window["chartjs-plugin-annotation"]);
 let currentGranularity = 'hour';
 let pingChart = null;
 
+let currentDate = new Date();
+currentDate.setHours(0, 0, 0, 0);
+
+function toDateParam(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function isToday(d) {
+    const t = new Date();
+    return d.getFullYear() === t.getFullYear() &&
+           d.getMonth() === t.getMonth() &&
+           d.getDate() === t.getDate();
+}
+
+function isYesterday(d) {
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    return d.getFullYear() === y.getFullYear() &&
+           d.getMonth() === y.getMonth() &&
+           d.getDate() === y.getDate();
+}
+
+function updateNavUI() {
+    const label = isToday(currentDate) ? 'Today' : 'Yesterday';
+    document.getElementById('date-label').textContent = label;
+    document.getElementById('btn-prev').disabled = isYesterday(currentDate);
+    document.getElementById('btn-next').disabled = isToday(currentDate);
+}
+
+function navigateDay(delta) {
+    currentDate.setDate(currentDate.getDate() + delta);
+    updateNavUI();
+    pingChart.options.plugins.annotation.annotations.nowLine =
+        isToday(currentDate) ? buildNowAnnotation(currentGranularity) : { display: false };
+    pingChart.resetZoom();
+    fetchAndUpdate();
+}
+
 function generateDayLabels(granularity) {
     const labels = [];
     if (granularity === 'hour') {
@@ -123,7 +164,8 @@ function setGranularity(g) {
     pingChart.data.labels = labels;
     pingChart.data.datasets[0].data = new Array(labels.length).fill(null);
     pingChart.data.datasets[1].data = new Array(labels.length).fill(null);
-    pingChart.options.plugins.annotation.annotations.nowLine = buildNowAnnotation(g);
+    pingChart.options.plugins.annotation.annotations.nowLine =
+        isToday(currentDate) ? buildNowAnnotation(g) : { display: false };
     pingChart.resetZoom();
     pingChart.update('none');
     fetchAndUpdate();
@@ -138,7 +180,7 @@ function bucketToLabel(bucket, granularity) {
 async function fetchAndUpdate() {
     try {
         const [statsRes, failRes] = await Promise.all([
-            fetch('/api/pings/stats?granularity=' + currentGranularity),
+            fetch('/api/pings/stats?granularity=' + currentGranularity + '&date=' + toDateParam(currentDate)),
             fetch('/api/pings/failures')
         ]);
         const stats = await statsRes.json();
@@ -159,7 +201,8 @@ async function fetchAndUpdate() {
 
         pingChart.data.datasets[0].data = avgData;
         pingChart.data.datasets[1].data = failCounts;
-        pingChart.options.plugins.annotation.annotations.nowLine = buildNowAnnotation(currentGranularity);
+        pingChart.options.plugins.annotation.annotations.nowLine =
+            isToday(currentDate) ? buildNowAnnotation(currentGranularity) : { display: false };
         pingChart.update('none');
 
         const last = stats.data.length ? stats.data[stats.data.length - 1] : null;
@@ -187,5 +230,6 @@ async function fetchAndUpdate() {
 }
 
 initChart();
+updateNavUI();
 fetchAndUpdate();
 setInterval(fetchAndUpdate, 5000);

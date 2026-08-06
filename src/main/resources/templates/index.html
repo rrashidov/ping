@@ -30,7 +30,12 @@
     <div class="card bg-dark border-secondary mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span class="fw-semibold">Response Time</span>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-center">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button id="btn-prev" type="button" class="btn btn-outline-secondary" onclick="navigateDay(-1)">&#8592;</button>
+                    <span id="date-label" class="btn btn-sm btn-outline-secondary disabled" style="pointer-events:none;">Today</span>
+                    <button id="btn-next" type="button" class="btn btn-outline-secondary" onclick="navigateDay(1)">&#8594;</button>
+                </div>
                 <div class="btn-group btn-group-sm" role="group">
                     <button id="btn-hour"   type="button" class="btn btn-primary" onclick="setGranularity('hour')">By Hour</button>
                     <button id="btn-minute" type="button" class="btn btn-outline-secondary" onclick="setGranularity('minute')">By Minute</button>

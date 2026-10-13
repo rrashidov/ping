@@ -1,6 +1,7 @@
 services:
   db:
     image: mysql:8
+    command: --binlog-expire-logs-seconds=604800
     environment:
       MYSQL_ROOT_PASSWORD: ping
       MYSQL_DATABASE: pingdb
